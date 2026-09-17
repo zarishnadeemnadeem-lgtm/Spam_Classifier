@@ -1,31 +1,31 @@
-import streamlit as st
+from fastapi import FastAPI
+from pydantic import BaseModel
 import joblib
-import re
-import string
 
-model = joblib.load('spam_model.pkl')
-tfidf = joblib.load('tfidf_vectorizer.pkl')
+app = FastAPI()
 
-def clean_text(text):
-    text = text.lower()
-    text = re.sub(r'\d+', '', text)
-    text = text.translate(str.maketrans('', '', string.punctuation))
-    text = re.sub(r'\s+', ' ', text).strip()
-    return text
+# Updated file names as requested
+vectorizer = joblib.load('tfidf_vectorizer.pkl')
+model = joblib.load('spam_model .pkl')
 
-st.title("📩 SMS Spam Classifier")
-st.write("Enter a message below to check if it's Spam or Ham.")
+class TextPayload(BaseModel):
+    text: str
 
-user_input = st.text_area("Message:")
-
-if st.button("Predict"):
-    if user_input.strip() == "":
-        st.warning("Please enter a message.")
-    else:
-        cleaned = clean_text(user_input)
-        vec = tfidf.transform([cleaned])
-        pred = model.predict(vec)[0]
-        if pred == 1:
-            st.error("🚨 This is SPAM")
-        else:
-            st.success("✅ This is HAM (Not Spam)")
+@app.post("/predict")
+def predict(data: TextPayload):
+    # 1. Text ko vectorizer se transform karein
+    X = vectorizer.transform([data.text])
+    
+    # 2. Prediction praapt karein (0 = ham, 1 = spam)
+    prediction = int(model.predict(X)[0])
+    probabilities = model.predict_proba(X)[0].tolist()
+    
+    label = "spam" if prediction == 1 else "ham"
+    
+    return {
+        "text": data.text,
+        "prediction": prediction,
+        "label": label,
+        "probability_ham": probabilities[0],
+        "probability_spam": probabilities[1]
+    }
