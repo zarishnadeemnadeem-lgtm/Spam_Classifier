@@ -1,31 +1,26 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
+import streamlit as st
 import joblib
 
-app = FastAPI()
-
-# Updated file names as requested
+# Saved model aur vectorizer load karein
 vectorizer = joblib.load('tfidf_vectorizer.pkl')
 model = joblib.load('spam_model .pkl')
 
-class TextPayload(BaseModel):
-    text: str
+# App ka Title
+st.title("📩 SMS & Email Spam Classifier")
+st.write("Enter text below to check if it's Spam or Safe (Ham).")
 
-@app.post("/predict")
-def predict(data: TextPayload):
-    # 1. Text ko vectorizer se transform karein
-    X = vectorizer.transform([data.text])
-    
-    # 2. Prediction praapt karein (0 = ham, 1 = spam)
-    prediction = int(model.predict(X)[0])
-    probabilities = model.predict_proba(X)[0].tolist()
-    
-    label = "spam" if prediction == 1 else "ham"
-    
-    return {
-        "text": data.text,
-        "prediction": prediction,
-        "label": label,
-        "probability_ham": probabilities[0],
-        "probability_spam": probabilities[1]
-    }
+# Input Box
+user_input = st.text_area("Message Text:", "")
+
+if st.button("Predict"):
+    if user_input.strip() != "":
+        X = vectorizer.transform([user_input])
+        prediction = model.predict(X)[0]
+        probabilities = model.predict_proba(X)[0]
+
+        if prediction == 1:
+            st.error(f"🚨 **SPAM Message!** (Confidence: {probabilities[1]*100:.1f}%)")
+        else:
+            st.success(f"✅ **HAM (Safe) Message!** (Confidence: {probabilities[0]*100:.1f}%)")
+    else:
+        st.warning("Please enter some text first.")
