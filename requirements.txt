@@ -1,5 +1,3 @@
-fastapi
-uvicorn
+streamlit
 scikit-learn
 joblib
-pydantic
